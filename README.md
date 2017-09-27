@@ -1,1 +1,3 @@
 # QuNect-Copy
+
+QuNect Copy copies records from one QuickBase table to another. QuNect Copy allows you to selectively choose which records are Copied by choosing a table report in the source table. QuNect Copy will guess at a field mapping based on matching fields names. You can then adjust the field mapping rempping columns or ignoring them. QuNect Copy will also copy the current revision of file attachments if you map file attachment fields to one another. QuNect Copy is available for a 30 day free trial. After the trial expires a license for QuNect ODBC for QuickBase is required. Licensees of QuNect ODBC for QuickBase can use QuNect Copy for free. QuNect Copy requires MS Windows and .NET Framework 4.5.
