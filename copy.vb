@@ -59,10 +59,10 @@ Public Class frmCopy
     End Enum
     Public sourceOrDestination As tableType
     Private Sub restore_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Text = "QuNect Copy 1.0.0.1" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+        Text = "QuNect Copy 1.0.0.6" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
         txtUsername.Text = GetSetting(AppName, "Credentials", "username")
         txtPassword.Text = GetSetting(AppName, "Credentials", "password")
-        txtServer.Text = GetSetting(AppName, "Credentials", "server", "www.quickbase.com")
+        txtServer.Text = GetSetting(AppName, "Credentials", "server", "")
         txtAppToken.Text = GetSetting(AppName, "Credentials", "apptoken", "b2fr52jcykx3tnbwj8s74b8ed55b")
         lblCatalog.Text = GetSetting(AppName, "config", "sourcecatalog", "")
         lblCatalog.Tag = GetSetting(AppName, "config", "sourcecatalogdbid", "")
@@ -77,21 +77,18 @@ Public Class frmCopy
         End If
 
         Dim myBuildInfo As FileVersionInfo = FileVersionInfo.GetVersionInfo(Application.ExecutablePath)
-        If lblCatalog.Text = "" Then
-            btnDestination.Visible = False
-            btnSource.Visible = False
-            dgMapping.Visible = False
-        End If
-
+        hideButtons()
     End Sub
     Private Sub lblCatalog_TextChanged(sender As Object, e As EventArgs) Handles lblCatalog.TextChanged
         SaveSetting(AppName, "config", "sourcecatalog", lblCatalog.Text)
         If Not lblCatalog.Tag Is Nothing Then
             SaveSetting(AppName, "config", "sourcecatalogdbid", lblCatalog.Tag)
         End If
+        hideButtons()
     End Sub
     Private Sub txtServer_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtServer.TextChanged
         SaveSetting(AppName, "Credentials", "server", txtServer.Text)
+        hideButtons()
     End Sub
     Private Sub ckbDetectProxy_CheckStateChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles ckbDetectProxy.CheckStateChanged
         If ckbDetectProxy.Checked Then
@@ -99,25 +96,29 @@ Public Class frmCopy
         Else
             SaveSetting(AppName, "Credentials", "detectproxysettings", "0")
         End If
+        hideButtons()
     End Sub
     Private Sub txtAppToken_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles txtAppToken.TextChanged
         SaveSetting(AppName, "Credentials", "apptoken", txtAppToken.Text)
+        hideButtons()
     End Sub
     Private Sub lblDestinationTable_TextChanged(sender As Object, e As EventArgs) Handles lblDestinationTable.TextChanged
         SaveSetting(AppName, "config", "destinationtable", lblDestinationTable.Text)
-        btnImport.Visible = False
+        hideButtons()
     End Sub
 
     Private Sub lblSourceTable_TextChanged(sender As Object, e As EventArgs) Handles lblSourceTable.TextChanged
         SaveSetting(AppName, "config", "sourcetable", lblSourceTable.Text)
-        btnImport.Visible = False
+        hideButtons()
     End Sub
     Private Sub txtUsername_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtUsername.TextChanged
         SaveSetting(AppName, "Credentials", "username", txtUsername.Text)
+        hideButtons()
     End Sub
 
     Private Sub txtPassword_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtPassword.TextChanged
         SaveSetting(AppName, "Credentials", "password", txtPassword.Text)
+        hideButtons()
     End Sub
 
     Private Function getConnectionString(usefids As Boolean, useAppDBID As Boolean) As String
@@ -198,9 +199,19 @@ Public Class frmCopy
             fidsForImport.Add(fieldNode.fid)
             destinationFields.Add(fieldNode.fid)
         Next
+        If fidsForImport.Count = 0 Then
+            MsgBox("You must map at least one field from the source table to the destination table.", MsgBoxStyle.OkOnly, AppName)
+            VolatileWrite(copyFinished, True)
+            Return False
+        End If
         Try
             Dim quNectConn As OdbcConnection = getquNectConn(getConnectionString(True, False))
             copyCount = countRecords("SELECT count(1) FROM """ & lblSourceTable.Text & """", quNectConn)
+            If copyCount = 0 Then
+                MsgBox("There are no records to copy.")
+                VolatileWrite(copyFinished, True)
+                Return False
+            End If
             Dim tooMany As MsgBoxResult = MsgBox("You will be copying " & copyCount & " records from """ & lblSourceTable.Text & """ to """ & lblDestinationTable.Text & """. Do you want to continue?", MsgBoxStyle.YesNo)
             If tooMany = MsgBoxResult.No Then
                 VolatileWrite(copyFinished, True)
@@ -263,8 +274,37 @@ Public Class frmCopy
     End Sub
     Private Sub hideButtons()
 
+        btnListFields.Visible = False
+        btnSource.Visible = False
+        btnDestination.Visible = False
         btnImport.Visible = False
         dgMapping.Visible = False
+
+        If lblCatalog.Text <> "" Then
+            btnSource.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblSourceTable.Text <> "" Then
+            btnDestination.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblDestinationTable.Text <> "" Then
+            btnListFields.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblDestinationTable.Text <> "" Then
+            btnListFields.Visible = True
+        Else
+            Exit Sub
+        End If
+        If dgMapping.RowCount > 0 Then
+            dgMapping.Visible = True
+            btnImport.Visible = True
+        End If
+
     End Sub
     Private Sub btnDestination_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnDestination.Click
         sourceOrDestination = tableType.destination
@@ -288,31 +328,25 @@ Public Class frmCopy
         End Try
     End Sub
     Sub listCatalogs()
-        Me.Cursor = Cursors.WaitCursor
         Dim connectionString As String = getConnectionString(False, False)
         Try
-            frmTableChooser.tvAppsTables.BeginUpdate()
-            frmTableChooser.tvAppsTables.Nodes.Clear()
             Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
             Using quNectCmd = New OdbcCommand("SELECT * FROM CATALOGS", quNectConn)
                 Dim dr As OdbcDataReader = quNectCmd.ExecuteReader()
+                frmTableChooser.tvAppsTables.BeginUpdate()
+                frmTableChooser.tvAppsTables.Nodes.Clear()
                 While (dr.Read())
                     Dim applicationName As String = dr.GetString(0)
                     Dim appDBID As String = dr.GetString(4)
                     Dim appNode As TreeNode = frmTableChooser.tvAppsTables.Nodes.Add(applicationName)
                     appNode.Tag = appDBID
                 End While
+                frmTableChooser.tvAppsTables.EndUpdate()
             End Using
-
-
         Catch ex As Exception
-
-        Finally
-            frmTableChooser.tvAppsTables.EndUpdate()
-            frmTableChooser.Show()
-            Me.Cursor = Cursors.Default
+            Exit Sub
         End Try
-
+        frmTableChooser.Show()
     End Sub
     Sub listTablesFromGetSchema(tables As DataTable)
         frmTableChooser.tvAppsTables.BeginUpdate()
@@ -489,11 +523,11 @@ Public Class frmCopy
 
     Private Sub btnListFields_Click(sender As Object, e As EventArgs) Handles btnListFields.Click
         If lblSourceTable.Text = "" Then
-            MsgBox("Please choose a file to import.", MsgBoxStyle.OkOnly, AppName)
+            MsgBox("Please choose a table to copy from.", MsgBoxStyle.OkOnly, AppName)
             Me.Cursor = Cursors.Default
             Exit Sub
         ElseIf lblDestinationTable.Text = "" Then
-            MsgBox("Please choose a table to import.", MsgBoxStyle.OkOnly, AppName)
+            MsgBox("Please choose a table to copy into.", MsgBoxStyle.OkOnly, AppName)
             Me.Cursor = Cursors.Default
             Exit Sub
         End If
@@ -518,10 +552,10 @@ Public Class frmCopy
     End Sub
 
     Private Sub btnCatalog_Click(sender As Object, e As EventArgs) Handles btnCatalog.Click
-        Me.Cursor = Cursors.Default
+        Me.Cursor = Cursors.WaitCursor
         sourceOrDestination = tableType.sourceCatalog
         listCatalogs()
-        Me.Cursor = Cursors.WaitCursor
+        Me.Cursor = Cursors.Default
     End Sub
 
     Private Sub showProgress()

@@ -26,9 +26,9 @@
     <InstallUrl>https://www.qunectllc.com/download/QuNectCopy/</InstallUrl>
     <SupportUrl>http://www.qunect.com</SupportUrl>
     <ErrorReportUrl>http://www.qunect.com</ErrorReportUrl>
-    <ProductName>QuNect Restore</ProductName>
+    <ProductName>QuNect Copy</ProductName>
     <PublisherName>QuNect</PublisherName>
-    <ApplicationRevision>1</ApplicationRevision>
+    <ApplicationRevision>6</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
