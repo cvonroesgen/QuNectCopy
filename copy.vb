@@ -52,25 +52,6 @@ Public Class frmCopy
         source
         destination
     End Enum
-    Enum filter
-        source
-        booleanOperator
-        criteria
-    End Enum
-    Enum comparisonResult
-        equal
-        notEqual
-        greater
-        less
-        null
-    End Enum
-    Enum errorTabs
-        missing
-        conversions
-        required
-        unique
-        malformed
-    End Enum
     Enum tableType
         source
         destination
@@ -78,7 +59,7 @@ Public Class frmCopy
     End Enum
     Public sourceOrDestination As tableType
     Private Sub restore_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Text = "QuNect Copy 1.0.0.9" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+        Text = "QuNect Copy 1.0.0.1" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
         txtUsername.Text = GetSetting(AppName, "Credentials", "username")
         txtPassword.Text = GetSetting(AppName, "Credentials", "password")
         txtServer.Text = GetSetting(AppName, "Credentials", "server", "www.quickbase.com")
@@ -205,13 +186,13 @@ Public Class frmCopy
             If keyfid = "3" And fieldNode.fid = "3" Then
                 Dim copyAnyway As MsgBoxResult = MsgBox("Copying into the key field " & fieldNode.label & " will update existing records without creating new records. Do you want to continue?", MsgBoxStyle.YesNo)
                 If copyAnyway = MsgBoxResult.No Then
-                    copyFinished = True
+                    VolatileWrite(copyFinished, True)
                     Return False
                 End If
             End If
             If fidsForImport.Contains(fieldNode.fid) Then
                 MsgBox("You cannot import two different columns into the same field: " & destComboBoxCell.Value, MsgBoxStyle.OkOnly, AppName)
-                copyFinished = True
+                VolatileWrite(copyFinished, True)
                 Return False
             End If
             fidsForImport.Add(fieldNode.fid)
@@ -222,7 +203,7 @@ Public Class frmCopy
             copyCount = countRecords("SELECT count(1) FROM """ & lblSourceTable.Text & """", quNectConn)
             Dim tooMany As MsgBoxResult = MsgBox("You will be copying " & copyCount & " records from """ & lblSourceTable.Text & """ to """ & lblDestinationTable.Text & """. Do you want to continue?", MsgBoxStyle.YesNo)
             If tooMany = MsgBoxResult.No Then
-                copyFinished = True
+                VolatileWrite(copyFinished, True)
                 Return False
             End If
             existingCount = countRecords("SELECT count(1) FROM """ & lblDestinationTable.Text & """ WHERE fid4 = '" & txtUsername.Text & "'", quNectConn)
@@ -232,11 +213,13 @@ Public Class frmCopy
             strSQL &= String.Join(", fid", destinationFields.ToArray) & ") Select fid" & String.Join(", fid", sourceFields.ToArray) & " FROM """ & lblSourceTable.Text & """"
             Using command As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
                 Dim i As Integer = command.ExecuteNonQuery()
+                VolatileWrite(copyFinished, True)
+                MsgBox("Copy complete. " & i & " records copied.")
             End Using
         Catch ex As Exception
             MsgBox("Could Not copy because " & ex.Message)
         End Try
-        copyFinished = True
+        VolatileWrite(copyFinished, True)
         Return True
 
     End Function
@@ -497,7 +480,7 @@ Public Class frmCopy
     End Sub
 
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
-        copyFinished = False
+        VolatileWrite(copyFinished, False)
         pb.Visible = True
         Dim copyThread As System.Threading.Thread = New Threading.Thread(AddressOf copyTable)
         copyThread.Start()
@@ -546,7 +529,7 @@ Public Class frmCopy
             Dim quNectConn As OdbcConnection = New OdbcConnection(getConnectionString(True, False))
             quNectConn.Open()
             Dim pbValue As Integer
-            While Not copyFinished
+            While Not VolatileRead(copyFinished)
                 Dim currentCount = countRecords("SELECT count(1) FROM """ & lblDestinationTable.Text & """ WHERE fid4 = '" & txtUsername.Text & "'", quNectConn)
                 Debug.WriteLine(Now & currentCount.ToString)
                 If currentCount > copyCount + existingCount Then
@@ -560,7 +543,8 @@ Public Class frmCopy
                 SetPBProgress(pbValue)
                 Threading.Thread.Sleep(2000)
             End While
-            SetLabelProgress("Copy complete " & (pbValue - existingCount) & " records copied.")
+            SetLabelProgress("")
+            SetPBProgress(copyCount + existingCount)
         Catch ex As Exception
             'MsgBox(ex.Message)
         End Try
@@ -596,7 +580,17 @@ Public Class frmCopy
 
 
     Private Sub frmCopy_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        copyFinished = True
+        VolatileWrite(copyFinished, True)
+    End Sub
+
+    Function VolatileRead(Of T)(ByRef Address As T) As T
+        VolatileRead = Address
+        Threading.Thread.MemoryBarrier()
+    End Function
+
+    Sub VolatileWrite(Of T)(ByRef Address As T, ByVal Value As T)
+        Threading.Thread.MemoryBarrier()
+        Address = Value
     End Sub
 End Class
 
