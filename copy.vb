@@ -1,9 +1,19 @@
-﻿Imports System.Data.Odbc
+﻿Imports System.ComponentModel
+Imports System.Data.Odbc
 Imports System.Text.RegularExpressions
 
 
 Public Class frmCopy
-    Private Structure fieldStruct
+    Private Class qdbField
+        Public Sub New(_fid As String, _label As String, _type As String, _parentFieldID As String, _unique As Boolean, _required As Boolean, _base_type As String, _decimal_places As Integer)
+            fid = _fid
+            label = _label
+            parentFieldID = _parentFieldID
+            unique = _unique
+            required = _required
+            base_type = _base_type
+            decimal_places = _decimal_places
+        End Sub
         Public fid As String
         Public label As String
         Public type As String
@@ -12,10 +22,14 @@ Public Class frmCopy
         Public required As Boolean
         Public base_type As String
         Public decimal_places As Integer
-    End Structure
+        Overrides Function toString() As String
+            Return label
+        End Function
+    End Class
     Private Const AppName = "QuNectCopy"
-    Private destinationFieldNodes As Dictionary(Of String, fieldStruct)
-    Private sourceFieldNodes As Dictionary(Of String, fieldStruct)
+    Private destinationFieldNodes As Dictionary(Of String, qdbField)
+    Private sourceFieldNodes As Dictionary(Of String, qdbField)
+    Private qdbConnections As New Dictionary(Of String, OdbcConnection)
     Private rids As HashSet(Of String)
     Private keyfid As String
     Private uniqueExistingFieldValues As Dictionary(Of String, HashSet(Of String))
@@ -25,6 +39,9 @@ Public Class frmCopy
     Private destinationLabelsToFids As Dictionary(Of String, String)
     Private sourceLabelsToFids As Dictionary(Of String, String)
     Private isBooleanTrue As Regex = New Regex("y|tr|c|[1-9]", RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+    Private copyFinished As Boolean = False
+    Dim copyCount As Integer
+    Dim existingCount As Integer
     Private Class qdbVersion
         Public year As Integer
         Public major As Integer
@@ -85,7 +102,6 @@ Public Class frmCopy
             dgMapping.Visible = False
         End If
 
-
     End Sub
     Private Sub lblCatalog_TextChanged(sender As Object, e As EventArgs) Handles lblCatalog.TextChanged
         SaveSetting(AppName, "config", "sourcecatalog", lblCatalog.Text)
@@ -138,24 +154,40 @@ Public Class frmCopy
         Dim strSQL As String = "SELECT fid" & fid & " FROM " & dbid
         getHashSetofFieldValues = New HashSet(Of String)
         Dim connectionString As String = getConnectionString(True, False)
-        Using quNectConn As OdbcConnection = getquNectConn(connectionString)
-            Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
-                Dim dr As OdbcDataReader
-                Try
-                    dr = quNectCmd.ExecuteReader()
-                    If Not dr.HasRows Then
-                        Exit Function
-                    End If
-                Catch excpt As Exception
+        Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
+        Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
+            Dim dr As OdbcDataReader
+            Try
+                dr = quNectCmd.ExecuteReader()
+                If Not dr.HasRows Then
                     Exit Function
-                End Try
-                While (dr.Read())
-                    getHashSetofFieldValues.Add(dr.GetValue(0))
-                End While
-            End Using
+                End If
+            Catch excpt As Exception
+                Exit Function
+            End Try
+            While (dr.Read())
+                getHashSetofFieldValues.Add(dr.GetValue(0))
+            End While
+        End Using
+
+    End Function
+    Function countRecords(sql As String, connection As OdbcConnection) As Integer
+        Using command As OdbcCommand = New OdbcCommand(sql, connection)
+            Dim dr As OdbcDataReader
+            Try
+                dr = command.ExecuteReader()
+            Catch excpt As Exception
+                Throw New System.Exception("Could not count records " & excpt.Message)
+            End Try
+            If Not dr.HasRows Then
+                Throw New System.Exception("Counting records failed. " & sql)
+            Else
+                Return dr(0)
+            End If
         End Using
     End Function
-    Private Function copyTable(checkForErrorsOnly As Boolean, previewOnly As Boolean) As Boolean
+    Private Function copyTable() As Boolean
+
         Dim destinationFields As New ArrayList
         Dim sourceFields As New ArrayList
         Dim fidsForImport As New HashSet(Of String)
@@ -166,36 +198,52 @@ Public Class frmCopy
             Dim destDDIndex = destComboBoxCell.Items.IndexOf(destComboBoxCell.Value)
             If destDDIndex = 0 Then Continue For
 
-            Dim fieldNode As fieldStruct
+            Dim fieldNode As qdbField
             fieldNode = sourceFieldNodes(sourceLabelsToFids(dgMapping.Rows(i).Cells(mapping.source).Value))
             sourceFields.Add(fieldNode.fid)
             fieldNode = destinationFieldNodes(destinationLabelsToFids(destComboBoxCell.Value))
+            If keyfid = "3" And fieldNode.fid = "3" Then
+                Dim copyAnyway As MsgBoxResult = MsgBox("Copying into the key field " & fieldNode.label & " will update existing records without creating new records. Do you want to continue?", MsgBoxStyle.YesNo)
+                If copyAnyway = MsgBoxResult.No Then
+                    copyFinished = True
+                    Return False
+                End If
+            End If
             If fidsForImport.Contains(fieldNode.fid) Then
                 MsgBox("You cannot import two different columns into the same field: " & destComboBoxCell.Value, MsgBoxStyle.OkOnly, AppName)
+                copyFinished = True
                 Return False
             End If
             fidsForImport.Add(fieldNode.fid)
             destinationFields.Add(fieldNode.fid)
         Next
         Try
-            strSQL &= String.Join(", fid", destinationFields.ToArray) & ") SELECT fid" & String.Join(", fid", sourceFields.ToArray) & " FROM """ & lblSourceTable.Text & """"
-            Using quNectConn As OdbcConnection = getquNectConn(getConnectionString(True, False))
-                Using command As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
-                    Dim i As Integer = command.ExecuteNonQuery()
-                    Dim msg As String = i & " records were copied."
-                    If i = -1 Then msg = "Success!"
-                    MsgBox(msg)
-                End Using
+            Dim quNectConn As OdbcConnection = getquNectConn(getConnectionString(True, False))
+            copyCount = countRecords("SELECT count(1) FROM """ & lblSourceTable.Text & """", quNectConn)
+            Dim tooMany As MsgBoxResult = MsgBox("You will be copying " & copyCount & " records from """ & lblSourceTable.Text & """ to """ & lblDestinationTable.Text & """. Do you want to continue?", MsgBoxStyle.YesNo)
+            If tooMany = MsgBoxResult.No Then
+                copyFinished = True
+                Return False
+            End If
+            existingCount = countRecords("SELECT count(1) FROM """ & lblDestinationTable.Text & """ WHERE fid4 = '" & txtUsername.Text & "'", quNectConn)
+
+            Dim progressThread As System.Threading.Thread = New Threading.Thread(AddressOf showProgress)
+            progressThread.Start()
+            strSQL &= String.Join(", fid", destinationFields.ToArray) & ") Select fid" & String.Join(", fid", sourceFields.ToArray) & " FROM """ & lblSourceTable.Text & """"
+            Using command As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
+                Dim i As Integer = command.ExecuteNonQuery()
             End Using
         Catch ex As Exception
-            MsgBox("Could not copy because " & ex.Message)
+            MsgBox("Could Not copy because " & ex.Message)
         End Try
-
+        copyFinished = True
         Return True
 
     End Function
     Private Function getquNectConn(connectionString As String) As OdbcConnection
-
+        If qdbConnections.ContainsKey(connectionString) Then
+            Return qdbConnections(connectionString)
+        End If
         Dim quNectConn As OdbcConnection = New OdbcConnection(connectionString)
         Try
             quNectConn.Open()
@@ -222,160 +270,16 @@ Public Class frmCopy
             Return Nothing
             Exit Function
         End If
+        qdbConnections.Add(connectionString, quNectConn)
         Return quNectConn
     End Function
-    Private Function showErrors(previewOnly As Boolean, ByRef conversionErrors As String, ByRef improperlyFormattedLines As String, ByRef uniqueFieldErrors As String, ByRef requiredFieldsErrors As String, ByRef missingRIDs As String) As Boolean
-        If conversionErrors <> "" Or improperlyFormattedLines <> "" Or uniqueFieldErrors <> "" Or requiredFieldsErrors <> "" Or missingRIDs <> "" Then
-            frmErr.lblMalformed.Text = improperlyFormattedLines
-            frmErr.lblUnique.Text = uniqueFieldErrors
-            frmErr.lblRequired.Text = requiredFieldsErrors
-            frmErr.lblConversions.Text = conversionErrors
-            frmErr.lblMissing.Text = missingRIDs
-            If improperlyFormattedLines <> "" Then
-                frmErr.TabControlErrors.SelectedIndex = errorTabs.malformed
-                frmErr.TabMalformed.Text = "*Malformed lines"
-            Else
-                frmErr.TabMalformed.Text = "Malformed lines"
-            End If
-            If uniqueFieldErrors <> "" Then
-                frmErr.TabControlErrors.SelectedIndex = errorTabs.unique
-                frmErr.TabUnique.Text = "*Unique"
-            Else
-                frmErr.TabUnique.Text = "Unique"
-            End If
-            If requiredFieldsErrors <> "" Then
-                frmErr.TabControlErrors.SelectedIndex = errorTabs.required
-                frmErr.TabRequired.Text = "*Required"
-            Else
-                frmErr.TabRequired.Text = "Required"
-            End If
-            If conversionErrors <> "" Then
-                frmErr.TabControlErrors.SelectedIndex = errorTabs.conversions
-                frmErr.TabConversions.Text = "*Conversion"
-            Else
-                frmErr.TabConversions.Text = "Conversion"
-            End If
-            If missingRIDs <> "" Then
-                frmErr.TabControlErrors.SelectedIndex = errorTabs.missing
-                frmErr.TabMissing.Text = "*Missing Record ID#s"
-            Else
-                frmErr.TabMissing.Text = "Missing Record ID#s"
-            End If
-            If previewOnly Then
-                frmErr.pnlButtons.Visible = False
-            Else
-                frmErr.pnlButtons.Visible = True
-            End If
-            Dim diagResult As DialogResult = frmErr.ShowDialog()
-            If frmErr.rdbCancel.Checked Then
-                Return False
-            Else
-                Return True
-            End If
-        End If
-        Return True
-    End Function
-    Function setODBCParameter(val As String, fid As String, fieldLabel As String, command As OdbcCommand, ByRef fileLineCounter As Integer, checkForErrorsOnly As Boolean, ByRef conversionErrors As String) As Boolean
-        Dim qdbType As OdbcType = command.Parameters("@fid" & fid).OdbcType
-        Try
-            Select Case qdbType
-                Case OdbcType.Int
-                    command.Parameters("@fid" & fid).Value = Convert.ToInt32(val)
-                Case OdbcType.Double, OdbcType.Numeric
-                    command.Parameters("@fid" & fid).Value = Convert.ToDouble(val)
-                Case OdbcType.Date
-                    command.Parameters("@fid" & fid).Value = Date.Parse(val)
-                Case OdbcType.DateTime
-                    command.Parameters("@fid" & fid).Value = DateTime.Parse(val)
-                Case OdbcType.Time
-                    command.Parameters("@fid" & fid).Value = TimeSpan.Parse(val)
-                Case OdbcType.Bit
-                    Dim match As Match = isBooleanTrue.Match(val)
-                    If match.Success Then
-                        command.Parameters("@fid" & fid).Value = True
-                    Else
-                        command.Parameters("@fid" & fid).Value = False
-                    End If
-                Case Else
-                    command.Parameters("@fid" & fid).Value = val
-            End Select
-        Catch ex As Exception
-            If checkForErrorsOnly And val <> "" Then
-                conversionErrors &= vbCrLf & "line " & fileLineCounter + 1 & " '" & val & "' to " & qdbType.ToString() & " for field " & fieldLabel
-                If conversionErrors.Length > 1000 Then
-                    conversionErrors &= vbCrLf & "There may be additional errors beyond the ones above."
-                    Return True
-                End If
-            End If
-            If frmErr.rdbSkipRecords.Checked Then
-                fileLineCounter += 1
-                Return False
-            End If
-            If Not checkForErrorsOnly Then
-                Select Case qdbType
-                    Case OdbcType.Int, OdbcType.Double, OdbcType.Numeric
-                        Dim nullDouble As Double
-                        command.Parameters("@fid" & fid).Value = nullDouble
-                    Case OdbcType.Date
-                        Dim nulldate As Date
-                        command.Parameters("@fid" & fid).Value = nulldate
-                    Case OdbcType.DateTime
-                        Dim nullDateTime As DateTime
-                        command.Parameters("@fid" & fid).Value = nullDateTime
-                    Case OdbcType.Time
-                        Dim nullTimeSpan As TimeSpan
-                        command.Parameters("@fid" & fid).Value = nullTimeSpan
-                    Case OdbcType.Bit
-                        command.Parameters("@fid" & fid).Value = False
-                    Case Else
-                        command.Parameters("@fid" & fid).Value = ""
-                End Select
-            End If
-        End Try
-        Return False
-    End Function
-    Private Function getODBCTypeFromQuickBaseFieldNode(fieldNode As fieldStruct) As OdbcType
-        Select Case fieldNode.base_type
-            Case "text"
-                Return OdbcType.VarChar
-            Case "float"
-                If fieldNode.decimal_places > 0 Then
-                    Return OdbcType.Numeric
-                Else
-                    Return OdbcType.Double
-                End If
-
-            Case "bool"
-                Return OdbcType.Bit
-            Case "int32"
-                Return OdbcType.Int
-            Case "int64"
-                Select Case fieldNode.type
-                    Case "timestamp"
-                        Return OdbcType.DateTime
-                    Case "timeofday"
-                        Return OdbcType.Time
-                    Case "duration"
-                        Return OdbcType.Double
-                    Case Else
-                        Return OdbcType.Date
-                End Select
-            Case Else
-                Return OdbcType.VarChar
-        End Select
-        Return OdbcType.VarChar
-    End Function
-
-
 
     Private Sub btnSource_Click(sender As Object, e As EventArgs) Handles btnSource.Click
         sourceOrDestination = tableType.source
         listTables()
     End Sub
-
-
     Private Sub hideButtons()
-        btnPreview.Visible = False
+
         btnImport.Visible = False
         dgMapping.Visible = False
     End Sub
@@ -390,14 +294,12 @@ Public Class frmCopy
             connectionString = getConnectionString(False, True)
         End If
         Try
-            Using quNectConn As OdbcConnection = getquNectConn(connectionString)
-                Dim tables As DataTable = quNectConn.GetSchema("Tables")
-                Dim views As DataTable = quNectConn.GetSchema("Views")
-                tables.Merge(views)
-                listTablesFromGetSchema(tables)
-                quNectConn.Close()
-                quNectConn.Dispose()
-            End Using
+            Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
+            Dim tables As DataTable = quNectConn.GetSchema("Tables")
+            Dim views As DataTable = quNectConn.GetSchema("Views")
+            tables.Merge(views)
+            listTablesFromGetSchema(tables)
+
         Catch ex As Exception
             MsgBox("Could not list tables because " & ex.Message)
         End Try
@@ -408,17 +310,17 @@ Public Class frmCopy
         Try
             frmTableChooser.tvAppsTables.BeginUpdate()
             frmTableChooser.tvAppsTables.Nodes.Clear()
-            Using quNectConn As OdbcConnection = getquNectConn(connectionString)
-                Using quNectCmd = New OdbcCommand("SELECT * FROM CATALOGS", quNectConn)
-                    Dim dr As OdbcDataReader = quNectCmd.ExecuteReader()
-                    While (dr.Read())
-                        Dim applicationName As String = dr.GetString(0)
-                        Dim appDBID As String = dr.GetString(4)
-                        Dim appNode As TreeNode = frmTableChooser.tvAppsTables.Nodes.Add(applicationName)
-                        appNode.Tag = appDBID
-                    End While
-                End Using
+            Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
+            Using quNectCmd = New OdbcCommand("SELECT * FROM CATALOGS", quNectConn)
+                Dim dr As OdbcDataReader = quNectCmd.ExecuteReader()
+                While (dr.Read())
+                    Dim applicationName As String = dr.GetString(0)
+                    Dim appDBID As String = dr.GetString(4)
+                    Dim appNode As TreeNode = frmTableChooser.tvAppsTables.Nodes.Add(applicationName)
+                    appNode.Tag = appDBID
+                End While
             End Using
+
 
         Catch ex As Exception
 
@@ -437,6 +339,7 @@ Public Class frmCopy
         Dim applicationName As String = ""
         Dim prevAppName As String = ""
         Dim dbid As String
+        pb.Minimum = 0
         pb.Value = 0
         pb.Visible = True
         pb.Maximum = tables.Rows.Count
@@ -470,7 +373,6 @@ Public Class frmCopy
 
         Next
 
-        pb.Visible = False
         frmTableChooser.tvAppsTables.EndUpdate()
         pb.Value = 0
         btnImport.Visible = True
@@ -483,117 +385,98 @@ Public Class frmCopy
         destinationLabelsToFids = New Dictionary(Of String, String)
         sourceLabelsToFids = New Dictionary(Of String, String)
         Dim destinationFIDtoLabel As New Dictionary(Of String, String)
-        destinationFieldNodes = New Dictionary(Of String, fieldStruct)
-        sourceFieldNodes = New Dictionary(Of String, fieldStruct)
+        destinationFieldNodes = New Dictionary(Of String, qdbField)
+        sourceFieldNodes = New Dictionary(Of String, qdbField)
 
         Dim connectionString As String = getConnectionString(False, True)
         Try
-            Using connection As OdbcConnection = getquNectConn(connectionString)
-                If connection Is Nothing Then Exit Sub
-                Dim strSQL As String = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & destinationDBID & "~fields"" WHERE (mode = '' and role = '') or fid = '3'"
+            Dim connection As OdbcConnection = getquNectConn(connectionString)
+            If connection Is Nothing Then Exit Sub
+            Dim strSQL As String = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & destinationDBID & "~fields"" WHERE (mode = '' and role = '') or fid = '3'"
 
-                Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
-                    Dim dr As OdbcDataReader
-                    Try
-                        dr = quNectCmd.ExecuteReader()
-                    Catch excpt As Exception
-                        quNectCmd.Dispose()
-                        Exit Sub
-                    End Try
-                    If Not dr.HasRows Then
-                        Exit Sub
+            Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
+                Dim dr As OdbcDataReader
+                Try
+                    dr = quNectCmd.ExecuteReader()
+                Catch excpt As Exception
+                    Throw New System.Exception("Could not get field information for " & destinationDBID & vbCrLf & excpt.Message)
+                End Try
+                If Not dr.HasRows Then
+                    Exit Sub
+                End If
+
+
+                'Loop through all of the fields in the schema.
+                DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Clear()
+
+                DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Add("")
+                While (dr.Read())
+                    Dim field As New qdbField(dr.GetString(1), dr.GetString(0), dr.GetString(2), dr.GetString(3), dr.GetBoolean(4), dr.GetBoolean(5), dr.GetString(7), 0)
+                    destinationFIDtoLabel.Add(field.fid, field.label)
+                    If field.parentFieldID <> "" Then
+                        field.label = destinationFIDtoLabel(field.parentFieldID) & ": " & field.label
                     End If
-
-
-                    'Loop through all of the fields in the schema.
-                    DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Clear()
-
-                    DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Add("")
-                    While (dr.Read())
-                        Dim field As New fieldStruct
-                        field.label = dr.GetString(0)
-                        field.fid = dr.GetString(1)
-                        field.type = dr.GetString(2)
-                        field.parentFieldID = dr.GetString(3)
-                        field.unique = dr.GetBoolean(4)
-                        field.required = dr.GetBoolean(5)
-                        destinationFIDtoLabel.Add(field.fid, field.label)
-                        If field.parentFieldID <> "" Then
-                            field.label = destinationFIDtoLabel(field.parentFieldID) & ": " & field.label
-                        End If
-                        If dr.GetBoolean(6) Then
-                            keyfid = field.fid
-                        End If
-                        field.base_type = dr.GetString(7)
-                        field.decimal_places = 0
-                        If Not IsDBNull(dr(8)) Then
-                            field.decimal_places = dr.GetInt32(8)
-                        End If
-                        destinationFieldNodes.Add(field.fid, field)
-                        destinationLabelsToFids.Add(field.label, field.fid)
-                        DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Add(field.label)
-                    End While
-                    dr.Close()
-                    quNectCmd.Dispose()
-                End Using
-                'here we need to open the source and get the field names
-                Dim sourceFIDtoLabel As New Dictionary(Of String, String)
-                sourceFieldNames.Clear()
-
-
-
-                strSQL = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & sourceDBID & "~fields"""
-
-                Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
-                    Dim dr As OdbcDataReader
-                    Try
-                        dr = quNectCmd.ExecuteReader()
-                    Catch excpt As Exception
-                        quNectCmd.Dispose()
-                        Exit Sub
-                    End Try
-                    If Not dr.HasRows Then
-                        Exit Sub
+                    If dr.GetBoolean(6) Then
+                        keyfid = field.fid
                     End If
-
-                    dgMapping.Rows.Clear()
-                    Dim i As Integer = 0
-                    While (dr.Read())
-                        Dim field As New fieldStruct
-                        field.label = dr.GetString(0)
-                        field.fid = dr.GetString(1)
-                        field.type = dr.GetString(2)
-                        field.parentFieldID = dr.GetString(3)
-                        field.unique = dr.GetBoolean(4)
-                        field.required = dr.GetBoolean(5)
-                        sourceFIDtoLabel.Add(field.fid, field.label)
-                        If field.parentFieldID <> "" Then
-                            field.label = sourceFIDtoLabel(field.parentFieldID) & ": " & field.label
-                        End If
-                        If dr.GetBoolean(6) Then
-                            keyfid = field.fid
-                        End If
-                        field.base_type = dr.GetString(7)
-                        field.decimal_places = 0
-                        If Not IsDBNull(dr(8)) Then
-                            field.decimal_places = dr.GetInt32(8)
-                        End If
-                        sourceFieldNodes.Add(field.fid, field)
-                        sourceLabelsToFids.Add(field.label, field.fid)
-                        sourceLabelToFieldType.Add(field.label, field.type)
-                        dgMapping.Rows.Add(New String() {field.label})
-                        sourceFieldNames.Add(field.label, i)
-                        i += 1
-                    End While
-                    dr.Close()
-                End Using
+                    If Not IsDBNull(dr(8)) Then
+                        field.decimal_places = dr.GetInt32(8)
+                    End If
+                    destinationFieldNodes.Add(field.fid, field)
+                    destinationLabelsToFids.Add(field.label, field.fid)
+                    DirectCast(dgMapping.Columns(mapping.destination), System.Windows.Forms.DataGridViewComboBoxColumn).Items.Add(field.label)
+                End While
+                dr.Close()
             End Using
+            'here we need to open the source and get the field names
+            Dim sourceFIDtoLabel As New Dictionary(Of String, String)
+            sourceFieldNames.Clear()
+
+
+
+            strSQL = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & sourceDBID & "~fields"""
+
+            Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
+                Dim dr As OdbcDataReader
+                Try
+                    dr = quNectCmd.ExecuteReader()
+                Catch excpt As Exception
+                    Throw New System.Exception("Could not get field information for " & sourceDBID & vbCrLf & excpt.Message)
+                End Try
+                If Not dr.HasRows Then
+                    Throw New System.Exception("Could not get field information for " & sourceDBID)
+                End If
+
+                dgMapping.Rows.Clear()
+                Dim i As Integer = 0
+                While (dr.Read())
+                    Dim field As New qdbField(dr.GetString(1), dr.GetString(0), dr.GetString(2), dr.GetString(3), dr.GetBoolean(4), dr.GetBoolean(5), dr.GetString(7), 0)
+                    sourceFIDtoLabel.Add(field.fid, field.label)
+                    If field.parentFieldID <> "" Then
+                        field.label = sourceFIDtoLabel(field.parentFieldID) & ": " & field.label
+                    End If
+
+                    field.base_type = dr.GetString(7)
+                    field.decimal_places = 0
+                    If Not IsDBNull(dr(8)) Then
+                        field.decimal_places = dr.GetInt32(8)
+                    End If
+                    sourceFieldNodes.Add(field.fid, field)
+                    sourceLabelsToFids.Add(field.label, field.fid)
+                    sourceLabelToFieldType.Add(field.label, field.type)
+                    dgMapping.Rows.Add(New String() {field.label})
+                    sourceFieldNames.Add(field.label, i)
+                    i += 1
+                End While
+                dr.Close()
+            End Using
+
 
             For Each row In dgMapping.Rows
                 guessDestination(row.Cells(mapping.source).Value, row.Index)
             Next
             btnImport.Visible = True
-            btnPreview.Visible = True
+
             dgMapping.Visible = True
 
             Me.Cursor = Cursors.Default
@@ -604,8 +487,8 @@ Public Class frmCopy
     End Sub
     Sub guessDestination(sourceFieldName As String, sourceFieldOrdinal As Integer)
 
-        For Each field As KeyValuePair(Of String, fieldStruct) In destinationFieldNodes
-            If field.Value.label = sourceFieldName AndAlso field.Value.type <> "address" Then
+        For Each field As KeyValuePair(Of String, qdbField) In destinationFieldNodes
+            If field.Value.label = sourceFieldName AndAlso field.Value.type <> "address" AndAlso field.Value.fid <> "3" Then
                 DirectCast(dgMapping.Rows(sourceFieldOrdinal).Cells(mapping.destination), System.Windows.Forms.DataGridViewComboBoxCell).Value = sourceFieldName
                 Exit For
             End If
@@ -613,12 +496,12 @@ Public Class frmCopy
 
     End Sub
 
-    Private Sub btnPreview_Click(sender As Object, e As EventArgs) Handles btnPreview.Click
-        copyTable(True, True)
-    End Sub
-
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
-        copyTable(False, False)
+        copyFinished = False
+        pb.Visible = True
+        Dim copyThread As System.Threading.Thread = New Threading.Thread(AddressOf copyTable)
+        copyThread.Start()
+
     End Sub
 
     Private Sub btnListFields_Click(sender As Object, e As EventArgs) Handles btnListFields.Click
@@ -631,8 +514,12 @@ Public Class frmCopy
             Me.Cursor = Cursors.Default
             Exit Sub
         End If
-        Me.Cursor = Cursors.Default
-        listFields(lblSourceTable.Text, lblDestinationTable.Text)
+        Me.Cursor = Cursors.WaitCursor
+        Try
+            listFields(lblSourceTable.Text, lblDestinationTable.Text)
+        Catch excpt As Exception
+            MsgBox(excpt.Message)
+        End Try
         Me.Cursor = Cursors.Default
     End Sub
 
@@ -648,11 +535,69 @@ Public Class frmCopy
     End Sub
 
     Private Sub btnCatalog_Click(sender As Object, e As EventArgs) Handles btnCatalog.Click
+        Me.Cursor = Cursors.Default
         sourceOrDestination = tableType.sourceCatalog
         listCatalogs()
+        Me.Cursor = Cursors.WaitCursor
+    End Sub
+
+    Private Sub showProgress()
+        Try
+            Dim quNectConn As OdbcConnection = New OdbcConnection(getConnectionString(True, False))
+            quNectConn.Open()
+            Dim pbValue As Integer
+            While Not copyFinished
+                Dim currentCount = countRecords("SELECT count(1) FROM """ & lblDestinationTable.Text & """ WHERE fid4 = '" & txtUsername.Text & "'", quNectConn)
+                Debug.WriteLine(Now & currentCount.ToString)
+                If currentCount > copyCount + existingCount Then
+                    pbValue = copyCount + existingCount
+                ElseIf currentCount < existingCount Then
+                    pbValue = existingCount
+                Else
+                    pbValue = currentCount
+                End If
+                SetLabelProgress("Copying record " & (pbValue - existingCount) & " of " & copyCount)
+                SetPBProgress(pbValue)
+                Threading.Thread.Sleep(2000)
+            End While
+            SetLabelProgress("Copy complete " & (pbValue - existingCount) & " records copied.")
+        Catch ex As Exception
+            'MsgBox(ex.Message)
+        End Try
+    End Sub
+    Delegate Sub LabelDelegate(progressMessage As String)
+    Private Sub SetLabelProgress(ByVal progressMessage As String)
+
+        ' InvokeRequired required compares the thread ID of the  
+        ' calling thread to the thread ID of the creating thread.  
+        ' If these threads are different, it returns true.  
+        If Me.lblProgress.InvokeRequired Or Me.pb.InvokeRequired Then
+            Dim d As New LabelDelegate(AddressOf SetLabelProgress)
+            Me.Invoke(d, New Object() {progressMessage})
+        Else
+            Me.lblProgress.Text = progressMessage
+        End If
+    End Sub
+    Delegate Sub PBDelegate(numRecords As Integer)
+    Private Sub SetPBProgress(ByVal numRecords As Integer)
+
+        ' InvokeRequired required compares the thread ID of the  
+        ' calling thread to the thread ID of the creating thread.  
+        ' If these threads are different, it returns true.  
+        If Me.pb.InvokeRequired Then
+            Dim d As New PBDelegate(AddressOf SetPBProgress)
+            Me.Invoke(d, New Object() {numRecords})
+        Else
+            Me.pb.Maximum = existingCount + copyCount
+            Me.pb.Minimum = existingCount
+            Me.pb.Value = numRecords
+        End If
     End Sub
 
 
+    Private Sub frmCopy_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
+        copyFinished = True
+    End Sub
 End Class
 
 

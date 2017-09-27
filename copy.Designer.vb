@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class frmCopy
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -20,8 +20,11 @@ Partial Class frmCopy
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
+    <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
+        Dim DataGridViewCellStyle1 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
+        Dim DataGridViewCellStyle2 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
+        Dim DataGridViewCellStyle3 As System.Windows.Forms.DataGridViewCellStyle = New System.Windows.Forms.DataGridViewCellStyle()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmCopy))
         Me.dgMapping = New System.Windows.Forms.DataGridView()
         Me.Source = New System.Windows.Forms.DataGridViewTextBoxColumn()
@@ -42,9 +45,7 @@ Partial Class frmCopy
         Me.lblSourceTable = New System.Windows.Forms.Label()
         Me.ckbDetectProxy = New System.Windows.Forms.CheckBox()
         Me.btnListFields = New System.Windows.Forms.Button()
-        Me.btnPreview = New System.Windows.Forms.Button()
         Me.lblProgress = New System.Windows.Forms.Label()
-        Me.lblMode = New System.Windows.Forms.Label()
         Me.btnCatalog = New System.Windows.Forms.Button()
         Me.lblCatalog = New System.Windows.Forms.Label()
         CType(Me.dgMapping, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -54,10 +55,34 @@ Partial Class frmCopy
         '
         Me.dgMapping.AllowUserToAddRows = False
         Me.dgMapping.AllowUserToDeleteRows = False
+        DataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control
+        DataGridViewCellStyle1.Font = New System.Drawing.Font("Microsoft Sans Serif", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        DataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText
+        DataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        DataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        DataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
+        Me.dgMapping.ColumnHeadersDefaultCellStyle = DataGridViewCellStyle1
         Me.dgMapping.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
         Me.dgMapping.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.Source, Me.Destination})
+        DataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window
+        DataGridViewCellStyle2.Font = New System.Drawing.Font("Microsoft Sans Serif", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        DataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText
+        DataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        DataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        DataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.[False]
+        Me.dgMapping.DefaultCellStyle = DataGridViewCellStyle2
         Me.dgMapping.Location = New System.Drawing.Point(18, 241)
         Me.dgMapping.Name = "dgMapping"
+        DataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft
+        DataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Control
+        DataGridViewCellStyle3.Font = New System.Drawing.Font("Microsoft Sans Serif", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        DataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.WindowText
+        DataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight
+        DataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText
+        DataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
+        Me.dgMapping.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
         Me.dgMapping.Size = New System.Drawing.Size(505, 682)
         Me.dgMapping.TabIndex = 0
         '
@@ -89,7 +114,7 @@ Partial Class frmCopy
         Me.btnImport.Name = "btnImport"
         Me.btnImport.Size = New System.Drawing.Size(185, 27)
         Me.btnImport.TabIndex = 3
-        Me.btnImport.Text = "Import from Source to Destination"
+        Me.btnImport.Text = "Copy from Source to Destination"
         Me.btnImport.UseVisualStyleBackColor = True
         '
         'btnDestination
@@ -108,7 +133,6 @@ Partial Class frmCopy
         Me.pb.Name = "pb"
         Me.pb.Size = New System.Drawing.Size(237, 23)
         Me.pb.TabIndex = 33
-        Me.pb.Visible = False
         '
         'lblAppToken
         '
@@ -210,31 +234,13 @@ Partial Class frmCopy
         Me.btnListFields.Text = "List Fields"
         Me.btnListFields.UseVisualStyleBackColor = True
         '
-        'btnPreview
-        '
-        Me.btnPreview.Location = New System.Drawing.Point(100, 208)
-        Me.btnPreview.Name = "btnPreview"
-        Me.btnPreview.Size = New System.Drawing.Size(221, 27)
-        Me.btnPreview.TabIndex = 41
-        Me.btnPreview.Text = "Preview which rows will be inported"
-        Me.btnPreview.UseVisualStyleBackColor = True
-        Me.btnPreview.Visible = False
-        '
         'lblProgress
         '
         Me.lblProgress.AutoSize = True
-        Me.lblProgress.Location = New System.Drawing.Point(587, 116)
+        Me.lblProgress.Location = New System.Drawing.Point(116, 215)
         Me.lblProgress.Name = "lblProgress"
         Me.lblProgress.Size = New System.Drawing.Size(0, 13)
         Me.lblProgress.TabIndex = 42
-        '
-        'lblMode
-        '
-        Me.lblMode.AutoSize = True
-        Me.lblMode.Location = New System.Drawing.Point(588, 152)
-        Me.lblMode.Name = "lblMode"
-        Me.lblMode.Size = New System.Drawing.Size(0, 13)
-        Me.lblMode.TabIndex = 43
         '
         'btnCatalog
         '
@@ -260,9 +266,7 @@ Partial Class frmCopy
         Me.ClientSize = New System.Drawing.Size(543, 947)
         Me.Controls.Add(Me.lblCatalog)
         Me.Controls.Add(Me.btnCatalog)
-        Me.Controls.Add(Me.lblMode)
         Me.Controls.Add(Me.lblProgress)
-        Me.Controls.Add(Me.btnPreview)
         Me.Controls.Add(Me.btnListFields)
         Me.Controls.Add(Me.ckbDetectProxy)
         Me.Controls.Add(Me.lblSourceTable)
@@ -307,9 +311,7 @@ Partial Class frmCopy
     Friend WithEvents btnListFields As System.Windows.Forms.Button
     Friend WithEvents Source As DataGridViewTextBoxColumn
     Friend WithEvents Destination As DataGridViewComboBoxColumn
-    Friend WithEvents btnPreview As Button
     Friend WithEvents lblProgress As Label
-    Friend WithEvents lblMode As Label
     Friend WithEvents btnCatalog As Button
     Friend WithEvents lblCatalog As Label
 End Class

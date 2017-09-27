@@ -41,7 +41,7 @@
         Me.Hide()
     End Sub
     Private Sub hideButtons()
-        frmCopy.btnPreview.Visible = False
+
         frmCopy.btnImport.Visible = False
         frmCopy.dgMapping.Visible = False
     End Sub
