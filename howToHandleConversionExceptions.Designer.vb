@@ -22,6 +22,7 @@ Partial Class frmErr
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmErr))
         Me.rdbSkipRecords = New System.Windows.Forms.RadioButton()
         Me.rdbBlankFields = New System.Windows.Forms.RadioButton()
         Me.rdbCancel = New System.Windows.Forms.RadioButton()
@@ -213,6 +214,7 @@ Partial Class frmErr
         Me.Controls.Add(Me.btnOK)
         Me.Controls.Add(Me.pnlButtons)
         Me.Controls.Add(Me.TabControlErrors)
+        Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MaximizeBox = False
         Me.MinimizeBox = False
         Me.Name = "frmErr"
