@@ -59,7 +59,7 @@ Public Class frmCopy
     End Enum
     Public sourceOrDestination As tableType
     Private Sub restore_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Text = "QuNect Copy 1.0.0.7" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+        Text = "QuNect Copy 1.0.0.9" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
         txtUsername.Text = GetSetting(AppName, "Credentials", "username")
         txtPassword.Text = GetSetting(AppName, "Credentials", "password")
         txtServer.Text = GetSetting(AppName, "Credentials", "server", "")
@@ -123,7 +123,7 @@ Public Class frmCopy
 
     Private Function getConnectionString(usefids As Boolean, useAppDBID As Boolean) As String
 
-        getConnectionString = "Driver={QuNect ODBC for QuickBase};FIELDNAMECHARACTERS=all;file=binary;uid=" & txtUsername.Text & ";pwd=" & txtPassword.Text & ";QUICKBASESERVER=" & txtServer.Text & ";APPTOKEN=" & txtAppToken.Text
+        getConnectionString = "Driver={QuNect ODBC for QuickBase};FIELDNAMECHARACTERS=all;ALLREVISIONS=ALL;uid=" & txtUsername.Text & ";pwd=" & txtPassword.Text & ";QUICKBASESERVER=" & txtServer.Text & ";APPTOKEN=" & txtAppToken.Text
         If usefids Then
             getConnectionString &= ";USEFIDS=1"
         End If
@@ -257,7 +257,7 @@ Public Class frmCopy
         qdbVer.year = CInt(m.Groups(1).Value)
         qdbVer.major = CInt(m.Groups(2).Value)
         qdbVer.minor = CInt(m.Groups(3).Value)
-        If (qdbVer.major < 7) Or (qdbVer.major = 7 And qdbVer.minor < 11) Then
+        If (qdbVer.major < 7) Or (qdbVer.major = 7 And qdbVer.minor < 33) Then
             MsgBox("You are running the " & ver & " version of QuNect ODBC for QuickBase. Please install the latest version from http://qunect.com/download/QuNect.exe")
             quNectConn.Close()
             Me.Cursor = Cursors.Default
