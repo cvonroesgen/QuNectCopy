@@ -37,7 +37,6 @@ Partial Class frmCopy
         Me.txtAppToken = New System.Windows.Forms.TextBox()
         Me.lblServer = New System.Windows.Forms.Label()
         Me.txtServer = New System.Windows.Forms.TextBox()
-        Me.lblPassword = New System.Windows.Forms.Label()
         Me.txtPassword = New System.Windows.Forms.TextBox()
         Me.lblUsername = New System.Windows.Forms.Label()
         Me.txtUsername = New System.Windows.Forms.TextBox()
@@ -48,6 +47,7 @@ Partial Class frmCopy
         Me.lblProgress = New System.Windows.Forms.Label()
         Me.btnCatalog = New System.Windows.Forms.Button()
         Me.lblCatalog = New System.Windows.Forms.Label()
+        Me.cmbPassword = New System.Windows.Forms.ComboBox()
         CType(Me.dgMapping, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
@@ -83,7 +83,7 @@ Partial Class frmCopy
         DataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText
         DataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.[True]
         Me.dgMapping.RowHeadersDefaultCellStyle = DataGridViewCellStyle3
-        Me.dgMapping.Size = New System.Drawing.Size(505, 682)
+        Me.dgMapping.Size = New System.Drawing.Size(516, 682)
         Me.dgMapping.TabIndex = 0
         '
         'Source
@@ -110,7 +110,7 @@ Partial Class frmCopy
         '
         'btnImport
         '
-        Me.btnImport.Location = New System.Drawing.Point(338, 208)
+        Me.btnImport.Location = New System.Drawing.Point(349, 208)
         Me.btnImport.Name = "btnImport"
         Me.btnImport.Size = New System.Drawing.Size(185, 27)
         Me.btnImport.TabIndex = 3
@@ -131,7 +131,7 @@ Partial Class frmCopy
         Me.pb.Location = New System.Drawing.Point(286, 83)
         Me.pb.Maximum = 1000
         Me.pb.Name = "pb"
-        Me.pb.Size = New System.Drawing.Size(237, 23)
+        Me.pb.Size = New System.Drawing.Size(248, 23)
         Me.pb.TabIndex = 33
         '
         'lblAppToken
@@ -153,7 +153,7 @@ Partial Class frmCopy
         'lblServer
         '
         Me.lblServer.AutoSize = True
-        Me.lblServer.Location = New System.Drawing.Point(289, 11)
+        Me.lblServer.Location = New System.Drawing.Point(360, 11)
         Me.lblServer.Name = "lblServer"
         Me.lblServer.Size = New System.Drawing.Size(93, 13)
         Me.lblServer.TabIndex = 28
@@ -161,26 +161,17 @@ Partial Class frmCopy
         '
         'txtServer
         '
-        Me.txtServer.Location = New System.Drawing.Point(286, 30)
+        Me.txtServer.Location = New System.Drawing.Point(361, 30)
         Me.txtServer.Name = "txtServer"
-        Me.txtServer.Size = New System.Drawing.Size(237, 20)
+        Me.txtServer.Size = New System.Drawing.Size(173, 20)
         Me.txtServer.TabIndex = 27
-        '
-        'lblPassword
-        '
-        Me.lblPassword.AutoSize = True
-        Me.lblPassword.Location = New System.Drawing.Point(153, 11)
-        Me.lblPassword.Name = "lblPassword"
-        Me.lblPassword.Size = New System.Drawing.Size(108, 13)
-        Me.lblPassword.TabIndex = 26
-        Me.lblPassword.Text = "QuickBase Password"
         '
         'txtPassword
         '
-        Me.txtPassword.Location = New System.Drawing.Point(150, 30)
+        Me.txtPassword.Location = New System.Drawing.Point(213, 30)
         Me.txtPassword.Name = "txtPassword"
         Me.txtPassword.PasswordChar = Global.Microsoft.VisualBasic.ChrW(42)
-        Me.txtPassword.Size = New System.Drawing.Size(120, 20)
+        Me.txtPassword.Size = New System.Drawing.Size(142, 20)
         Me.txtPassword.TabIndex = 25
         '
         'lblUsername
@@ -196,7 +187,7 @@ Partial Class frmCopy
         '
         Me.txtUsername.Location = New System.Drawing.Point(12, 30)
         Me.txtUsername.Name = "txtUsername"
-        Me.txtUsername.Size = New System.Drawing.Size(120, 20)
+        Me.txtUsername.Size = New System.Drawing.Size(195, 20)
         Me.txtUsername.TabIndex = 23
         '
         'lblDestinationTable
@@ -259,11 +250,22 @@ Partial Class frmCopy
         Me.lblCatalog.Size = New System.Drawing.Size(0, 13)
         Me.lblCatalog.TabIndex = 45
         '
+        'cmbPassword
+        '
+        Me.cmbPassword.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cmbPassword.FormattingEnabled = True
+        Me.cmbPassword.Items.AddRange(New Object() {"Please choose...", "QuickBase Password", "QuickBase User Token"})
+        Me.cmbPassword.Location = New System.Drawing.Point(213, 8)
+        Me.cmbPassword.Name = "cmbPassword"
+        Me.cmbPassword.Size = New System.Drawing.Size(141, 21)
+        Me.cmbPassword.TabIndex = 46
+        '
         'frmCopy
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(543, 947)
+        Me.Controls.Add(Me.cmbPassword)
         Me.Controls.Add(Me.lblCatalog)
         Me.Controls.Add(Me.btnCatalog)
         Me.Controls.Add(Me.lblProgress)
@@ -276,7 +278,6 @@ Partial Class frmCopy
         Me.Controls.Add(Me.txtAppToken)
         Me.Controls.Add(Me.lblServer)
         Me.Controls.Add(Me.txtServer)
-        Me.Controls.Add(Me.lblPassword)
         Me.Controls.Add(Me.txtPassword)
         Me.Controls.Add(Me.lblUsername)
         Me.Controls.Add(Me.txtUsername)
@@ -301,7 +302,6 @@ Partial Class frmCopy
     Friend WithEvents txtAppToken As System.Windows.Forms.TextBox
     Friend WithEvents lblServer As System.Windows.Forms.Label
     Friend WithEvents txtServer As System.Windows.Forms.TextBox
-    Friend WithEvents lblPassword As System.Windows.Forms.Label
     Friend WithEvents txtPassword As System.Windows.Forms.TextBox
     Friend WithEvents lblUsername As System.Windows.Forms.Label
     Friend WithEvents txtUsername As System.Windows.Forms.TextBox
@@ -314,4 +314,5 @@ Partial Class frmCopy
     Friend WithEvents lblProgress As Label
     Friend WithEvents btnCatalog As Button
     Friend WithEvents lblCatalog As Label
+    Friend WithEvents cmbPassword As ComboBox
 End Class

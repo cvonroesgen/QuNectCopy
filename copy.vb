@@ -27,6 +27,7 @@ Public Class frmCopy
         End Function
     End Class
     Private Const AppName = "QuNectCopy"
+    Private Const Title = "QuNect Copy 1.0.0.12" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
     Private destinationFieldNodes As Dictionary(Of String, qdbField)
     Private sourceFieldNodes As Dictionary(Of String, qdbField)
     Private qdbConnections As New Dictionary(Of String, OdbcConnection)
@@ -59,8 +60,9 @@ Public Class frmCopy
     End Enum
     Public sourceOrDestination As tableType
     Private Sub restore_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Text = "QuNect Copy 1.0.0.9" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+        Text = Title
         txtUsername.Text = GetSetting(AppName, "Credentials", "username")
+        cmbPassword.SelectedIndex = CInt(GetSetting(AppName, "Credentials", "passwordOrToken", "0"))
         txtPassword.Text = GetSetting(AppName, "Credentials", "password")
         txtServer.Text = GetSetting(AppName, "Credentials", "server", "")
         txtAppToken.Text = GetSetting(AppName, "Credentials", "apptoken", "b2fr52jcykx3tnbwj8s74b8ed55b")
@@ -130,28 +132,15 @@ Public Class frmCopy
         If useAppDBID Then
             getConnectionString &= ";APPID=" & lblCatalog.Tag
         End If
-    End Function
-
-    Private Function getHashSetofFieldValues(dbid As String, fid As String) As HashSet(Of String)
-        Dim strSQL As String = "SELECT fid" & fid & " FROM " & dbid
-        getHashSetofFieldValues = New HashSet(Of String)
-        Dim connectionString As String = getConnectionString(True, False)
-        Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
-        Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, quNectConn)
-            Dim dr As OdbcDataReader
-            Try
-                dr = quNectCmd.ExecuteReader()
-                If Not dr.HasRows Then
-                    Exit Function
-                End If
-            Catch excpt As Exception
-                Exit Function
-            End Try
-            While (dr.Read())
-                getHashSetofFieldValues.Add(dr.GetValue(0))
-            End While
-        End Using
-
+        If cmbPassword.SelectedIndex = 0 Then
+            cmbPassword.Focus()
+            Throw New System.Exception("Please indicate whether you are using a password or a user token.")
+            Return ""
+        ElseIf cmbPassword.SelectedIndex = 1 Then
+            getConnectionString &= ";PWDISPASSWORD=1"
+        Else
+            getConnectionString &= ";PWDISPASSWORD=0"
+        End If
     End Function
     Function countRecords(sql As String, connection As OdbcConnection) As Integer
         Using command As OdbcCommand = New OdbcCommand(sql, connection)
@@ -253,11 +242,12 @@ Public Class frmCopy
         End Try
 
         Dim ver As String = quNectConn.ServerVersion
+        Me.Text = Title & " with QuNect ODBC for QuickBase " & ver
         Dim m As Match = Regex.Match(ver, "\d+\.(\d+)\.(\d+)\.(\d+)")
         qdbVer.year = CInt(m.Groups(1).Value)
         qdbVer.major = CInt(m.Groups(2).Value)
         qdbVer.minor = CInt(m.Groups(3).Value)
-        If (qdbVer.major < 7) Or (qdbVer.major = 7 And qdbVer.minor < 33) Then
+        If (qdbVer.major < 7) Or (qdbVer.major = 7 And qdbVer.minor < 37) Then
             MsgBox("You are running the " & ver & " version of QuNect ODBC for QuickBase. Please install the latest version from http://qunect.com/download/QuNect.exe")
             quNectConn.Close()
             Me.Cursor = Cursors.Default
@@ -312,11 +302,11 @@ Public Class frmCopy
     End Sub
     Private Sub listTables()
         Me.Cursor = Cursors.WaitCursor
-        Dim connectionString As String = getConnectionString(False, False)
-        If sourceOrDestination = tableType.source Then
-            connectionString = getConnectionString(False, True)
-        End If
         Try
+            Dim connectionString As String = getConnectionString(False, False)
+            If sourceOrDestination = tableType.source Then
+                connectionString = getConnectionString(False, True)
+            End If
             Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
             Dim tables As DataTable = quNectConn.GetSchema("Tables")
             Dim views As DataTable = quNectConn.GetSchema("Views")
@@ -328,8 +318,8 @@ Public Class frmCopy
         End Try
     End Sub
     Sub listCatalogs()
-        Dim connectionString As String = getConnectionString(False, False)
         Try
+            Dim connectionString As String = getConnectionString(False, False)
             Dim quNectConn As OdbcConnection = getquNectConn(connectionString)
             Using quNectCmd = New OdbcCommand("SELECT * FROM CATALOGS", quNectConn)
                 Dim dr As OdbcDataReader = quNectCmd.ExecuteReader()
@@ -344,6 +334,7 @@ Public Class frmCopy
                 frmTableChooser.tvAppsTables.EndUpdate()
             End Using
         Catch ex As Exception
+            MsgBox("Could not list catalogs because " & ex.Message)
             Exit Sub
         End Try
         frmTableChooser.Show()
@@ -405,11 +396,11 @@ Public Class frmCopy
         destinationFieldNodes = New Dictionary(Of String, qdbField)
         sourceFieldNodes = New Dictionary(Of String, qdbField)
 
-        Dim connectionString As String = getConnectionString(False, True)
         Try
+            Dim connectionString As String = getConnectionString(False, True)
             Dim connection As OdbcConnection = getquNectConn(connectionString)
             If connection Is Nothing Then Exit Sub
-            Dim strSQL As String = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & destinationDBID & "~fields"" WHERE (mode = '' and role = '') or fid = '3'"
+            Dim strSQL As String = "SELECT label, fid, field_type, parentFieldID, ""isunique"", required, ""iskey"", base_type, decimal_places  FROM """ & destinationDBID & "~fields"" WHERE (mode = '' and role = '') or fid = '3'"
 
             Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
                 Dim dr As OdbcDataReader
@@ -451,7 +442,7 @@ Public Class frmCopy
 
 
 
-            strSQL = "SELECT label, fid, field_type, parentFieldID, ""unique"", required, ""key"", base_type, decimal_places  FROM """ & sourceDBID & "~fields"""
+            strSQL = "SELECT label, fid, field_type, parentFieldID, ""isunique"", required, ""iskey"", base_type, decimal_places  FROM """ & sourceDBID & "~fields"""
 
             Using quNectCmd As OdbcCommand = New OdbcCommand(strSQL, connection)
                 Dim dr As OdbcDataReader
@@ -625,6 +616,15 @@ Public Class frmCopy
     Sub VolatileWrite(Of T)(ByRef Address As T, ByVal Value As T)
         Threading.Thread.MemoryBarrier()
         Address = Value
+    End Sub
+
+    Private Sub cmbPassword_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbPassword.SelectedIndexChanged
+        SaveSetting(AppName, "Credentials", "passwordOrToken", cmbPassword.SelectedIndex)
+        If cmbPassword.SelectedIndex = 0 Then
+            txtPassword.Enabled = False
+        Else
+            txtPassword.Enabled = True
+        End If
     End Sub
 End Class
 
