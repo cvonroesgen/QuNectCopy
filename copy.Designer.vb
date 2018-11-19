@@ -48,6 +48,8 @@ Partial Class frmCopy
         Me.btnCatalog = New System.Windows.Forms.Button()
         Me.lblCatalog = New System.Windows.Forms.Label()
         Me.cmbPassword = New System.Windows.Forms.ComboBox()
+        Me.btnAppToken = New System.Windows.Forms.Button()
+        Me.btnUserToken = New System.Windows.Forms.Button()
         CType(Me.dgMapping, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
@@ -168,10 +170,10 @@ Partial Class frmCopy
         '
         'txtPassword
         '
-        Me.txtPassword.Location = New System.Drawing.Point(213, 30)
+        Me.txtPassword.Location = New System.Drawing.Point(188, 30)
         Me.txtPassword.Name = "txtPassword"
         Me.txtPassword.PasswordChar = Global.Microsoft.VisualBasic.ChrW(42)
-        Me.txtPassword.Size = New System.Drawing.Size(142, 20)
+        Me.txtPassword.Size = New System.Drawing.Size(167, 20)
         Me.txtPassword.TabIndex = 25
         '
         'lblUsername
@@ -187,7 +189,7 @@ Partial Class frmCopy
         '
         Me.txtUsername.Location = New System.Drawing.Point(12, 30)
         Me.txtUsername.Name = "txtUsername"
-        Me.txtUsername.Size = New System.Drawing.Size(195, 20)
+        Me.txtUsername.Size = New System.Drawing.Size(172, 20)
         Me.txtUsername.TabIndex = 23
         '
         'lblDestinationTable
@@ -255,16 +257,36 @@ Partial Class frmCopy
         Me.cmbPassword.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cmbPassword.FormattingEnabled = True
         Me.cmbPassword.Items.AddRange(New Object() {"Please choose...", "QuickBase Password", "QuickBase User Token"})
-        Me.cmbPassword.Location = New System.Drawing.Point(213, 8)
+        Me.cmbPassword.Location = New System.Drawing.Point(188, 8)
         Me.cmbPassword.Name = "cmbPassword"
-        Me.cmbPassword.Size = New System.Drawing.Size(141, 21)
+        Me.cmbPassword.Size = New System.Drawing.Size(143, 21)
         Me.cmbPassword.TabIndex = 46
+        '
+        'btnAppToken
+        '
+        Me.btnAppToken.Location = New System.Drawing.Point(160, 60)
+        Me.btnAppToken.Name = "btnAppToken"
+        Me.btnAppToken.Size = New System.Drawing.Size(19, 20)
+        Me.btnAppToken.TabIndex = 79
+        Me.btnAppToken.Text = "?"
+        Me.btnAppToken.UseVisualStyleBackColor = True
+        '
+        'btnUserToken
+        '
+        Me.btnUserToken.Location = New System.Drawing.Point(335, 9)
+        Me.btnUserToken.Name = "btnUserToken"
+        Me.btnUserToken.Size = New System.Drawing.Size(19, 20)
+        Me.btnUserToken.TabIndex = 80
+        Me.btnUserToken.Text = "?"
+        Me.btnUserToken.UseVisualStyleBackColor = True
         '
         'frmCopy
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(543, 947)
+        Me.Controls.Add(Me.btnUserToken)
+        Me.Controls.Add(Me.btnAppToken)
         Me.Controls.Add(Me.cmbPassword)
         Me.Controls.Add(Me.lblCatalog)
         Me.Controls.Add(Me.btnCatalog)
@@ -315,4 +337,6 @@ Partial Class frmCopy
     Friend WithEvents btnCatalog As Button
     Friend WithEvents lblCatalog As Label
     Friend WithEvents cmbPassword As ComboBox
+    Friend WithEvents btnAppToken As Button
+    Friend WithEvents btnUserToken As Button
 End Class

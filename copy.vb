@@ -27,7 +27,7 @@ Public Class frmCopy
         End Function
     End Class
     Private Const AppName = "QuNectCopy"
-    Private Const Title = "QuNect Copy 1.0.0.12" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+    Private Const Title = "QuNect Copy 1.0.0.13" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
     Private destinationFieldNodes As Dictionary(Of String, qdbField)
     Private sourceFieldNodes As Dictionary(Of String, qdbField)
     Private qdbConnections As New Dictionary(Of String, OdbcConnection)
@@ -79,18 +79,58 @@ Public Class frmCopy
         End If
 
         Dim myBuildInfo As FileVersionInfo = FileVersionInfo.GetVersionInfo(Application.ExecutablePath)
-        hideButtons()
+        showHideControls()
     End Sub
     Private Sub lblCatalog_TextChanged(sender As Object, e As EventArgs) Handles lblCatalog.TextChanged
         SaveSetting(AppName, "config", "sourcecatalog", lblCatalog.Text)
         If Not lblCatalog.Tag Is Nothing Then
             SaveSetting(AppName, "config", "sourcecatalogdbid", lblCatalog.Tag)
         End If
-        hideButtons()
+        showHideControls()
+    End Sub
+    Sub showHideControls()
+        cmbPassword.Visible = txtUsername.Text.Length > 0
+        txtPassword.Visible = cmbPassword.Visible And cmbPassword.SelectedIndex <> 0
+        txtServer.Visible = txtPassword.Visible And txtPassword.Text.Length > 0
+        lblServer.Visible = txtServer.Visible
+        lblAppToken.Visible = cmbPassword.Visible And cmbPassword.SelectedIndex = 1
+        btnAppToken.Visible = lblAppToken.Visible
+        txtAppToken.Visible = lblAppToken.Visible
+        btnUserToken.Visible = cmbPassword.Visible And cmbPassword.SelectedIndex = 2
+        btnListFields.Visible = False
+        btnSource.Visible = False
+        btnDestination.Visible = False
+        btnImport.Visible = False
+        dgMapping.Visible = False
+
+        If lblCatalog.Text <> "" Then
+            btnSource.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblSourceTable.Text <> "" Then
+            btnDestination.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblDestinationTable.Text <> "" Then
+            btnListFields.Visible = True
+        Else
+            Exit Sub
+        End If
+        If lblDestinationTable.Text <> "" Then
+            btnListFields.Visible = True
+        Else
+            Exit Sub
+        End If
+        If dgMapping.RowCount > 0 Then
+            dgMapping.Visible = True
+            btnImport.Visible = True
+        End If
     End Sub
     Private Sub txtServer_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtServer.TextChanged
         SaveSetting(AppName, "Credentials", "server", txtServer.Text)
-        hideButtons()
+        showHideControls()
     End Sub
     Private Sub ckbDetectProxy_CheckStateChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles ckbDetectProxy.CheckStateChanged
         If ckbDetectProxy.Checked Then
@@ -98,29 +138,31 @@ Public Class frmCopy
         Else
             SaveSetting(AppName, "Credentials", "detectproxysettings", "0")
         End If
-        hideButtons()
+        showHideControls()
     End Sub
     Private Sub txtAppToken_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles txtAppToken.TextChanged
         SaveSetting(AppName, "Credentials", "apptoken", txtAppToken.Text)
-        hideButtons()
+        showHideControls()
     End Sub
     Private Sub lblDestinationTable_TextChanged(sender As Object, e As EventArgs) Handles lblDestinationTable.TextChanged
         SaveSetting(AppName, "config", "destinationtable", lblDestinationTable.Text)
-        hideButtons()
+        showHideControls()
     End Sub
 
     Private Sub lblSourceTable_TextChanged(sender As Object, e As EventArgs) Handles lblSourceTable.TextChanged
         SaveSetting(AppName, "config", "sourcetable", lblSourceTable.Text)
-        hideButtons()
+        showHideControls()
     End Sub
     Private Sub txtUsername_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtUsername.TextChanged
         SaveSetting(AppName, "Credentials", "username", txtUsername.Text)
-        hideButtons()
+        showHideControls()
+        showHideControls()
     End Sub
 
     Private Sub txtPassword_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtPassword.TextChanged
         SaveSetting(AppName, "Credentials", "password", txtPassword.Text)
-        hideButtons()
+        showHideControls()
+        showHideControls()
     End Sub
 
     Private Function getConnectionString(usefids As Boolean, useAppDBID As Boolean) As String
@@ -262,40 +304,7 @@ Public Class frmCopy
         sourceOrDestination = tableType.source
         listTables()
     End Sub
-    Private Sub hideButtons()
 
-        btnListFields.Visible = False
-        btnSource.Visible = False
-        btnDestination.Visible = False
-        btnImport.Visible = False
-        dgMapping.Visible = False
-
-        If lblCatalog.Text <> "" Then
-            btnSource.Visible = True
-        Else
-            Exit Sub
-        End If
-        If lblSourceTable.Text <> "" Then
-            btnDestination.Visible = True
-        Else
-            Exit Sub
-        End If
-        If lblDestinationTable.Text <> "" Then
-            btnListFields.Visible = True
-        Else
-            Exit Sub
-        End If
-        If lblDestinationTable.Text <> "" Then
-            btnListFields.Visible = True
-        Else
-            Exit Sub
-        End If
-        If dgMapping.RowCount > 0 Then
-            dgMapping.Visible = True
-            btnImport.Visible = True
-        End If
-
-    End Sub
     Private Sub btnDestination_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnDestination.Click
         sourceOrDestination = tableType.destination
         listTables()
@@ -620,11 +629,14 @@ Public Class frmCopy
 
     Private Sub cmbPassword_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbPassword.SelectedIndexChanged
         SaveSetting(AppName, "Credentials", "passwordOrToken", cmbPassword.SelectedIndex)
-        If cmbPassword.SelectedIndex = 0 Then
-            txtPassword.Enabled = False
-        Else
-            txtPassword.Enabled = True
-        End If
+        showHideControls()
+    End Sub
+    Private Sub btnAppToken_Click(sender As Object, e As EventArgs) Handles btnAppToken.Click
+        Process.Start("https://qunect.com/flash/AppToken.html")
+    End Sub
+
+    Private Sub btnUserToken_Click(sender As Object, e As EventArgs) Handles btnUserToken.Click
+        Process.Start("https://qunect.com/flash/UserToken.html")
     End Sub
 End Class
 
