@@ -27,7 +27,7 @@ Public Class frmCopy
         End Function
     End Class
     Private Const AppName = "QuNectCopy"
-    Private Const Title = "QuNect Copy 1.0.0.13" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+    Private Const Title = "QuNect Copy 1.0.0.15" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
     Private destinationFieldNodes As Dictionary(Of String, qdbField)
     Private sourceFieldNodes As Dictionary(Of String, qdbField)
     Private qdbConnections As New Dictionary(Of String, OdbcConnection)

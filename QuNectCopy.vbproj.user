@@ -2,7 +2,7 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PublishUrlHistory>C:\QuNect\QuNectCopy\QuNectCopy\publish\|C:\QuNect\QuNectCopy\QuNectCopy\publish\|publish\</PublishUrlHistory>
-    <InstallUrlHistory>https://www.qunect.com/download/QuNectCopy/|https://www.qunectllc.com/download/QuNectCopy/|https://www.qunectllc.com/download/QuNectCopy/</InstallUrlHistory>
+    <InstallUrlHistory>https://qunect.com/download/QuNectCopy/|https://www.qunect.com/download/QuNectCopy/|https://www.qunectllc.com/download/QuNectCopy/|https://www.qunectllc.com/download/QuNectCopy/</InstallUrlHistory>
     <SupportUrlHistory>http://www.qunect.com</SupportUrlHistory>
     <UpdateUrlHistory />
     <BootstrapperUrlHistory />
