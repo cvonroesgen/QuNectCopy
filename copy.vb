@@ -27,7 +27,7 @@ Public Class frmCopy
         End Function
     End Class
     Private Const AppName = "QuNectCopy"
-    Private Const Title = "QuNect Copy 1.0.0.15" ' & ApplicationDeployment.CurrentDeployment.CurrentVersion.ToString
+    Private appVersion As String
     Private destinationFieldNodes As Dictionary(Of String, qdbField)
     Private sourceFieldNodes As Dictionary(Of String, qdbField)
     Private qdbConnections As New Dictionary(Of String, OdbcConnection)
@@ -60,7 +60,9 @@ Public Class frmCopy
     End Enum
     Public sourceOrDestination As tableType
     Private Sub restore_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Text = Title
+        Dim myBuildInfo As FileVersionInfo = FileVersionInfo.GetVersionInfo(Application.ExecutablePath)
+        appVersion = myBuildInfo.ProductVersion
+        Text = AppName & " " & appVersion
         txtUsername.Text = GetSetting(AppName, "Credentials", "username")
         cmbPassword.SelectedIndex = CInt(GetSetting(AppName, "Credentials", "passwordOrToken", "0"))
         txtPassword.Text = GetSetting(AppName, "Credentials", "password")
@@ -78,7 +80,6 @@ Public Class frmCopy
             ckbDetectProxy.Checked = False
         End If
 
-        Dim myBuildInfo As FileVersionInfo = FileVersionInfo.GetVersionInfo(Application.ExecutablePath)
         showHideControls()
     End Sub
     Private Sub lblCatalog_TextChanged(sender As Object, e As EventArgs) Handles lblCatalog.TextChanged
@@ -167,7 +168,7 @@ Public Class frmCopy
 
     Private Function getConnectionString(usefids As Boolean, useAppDBID As Boolean) As String
 
-        getConnectionString = "Driver={QuNect ODBC for QuickBase};FIELDNAMECHARACTERS=all;ALLREVISIONS=ALL;uid=" & txtUsername.Text & ";pwd=" & txtPassword.Text & ";QUICKBASESERVER=" & txtServer.Text & ";APPTOKEN=" & txtAppToken.Text
+        getConnectionString = "Driver={QuNect ODBC For QuickBase};FIELDNAMECHARACTERS=all;ALLREVISIONS=ALL;uid=" & txtUsername.Text & ";pwd=" & txtPassword.Text & ";QUICKBASESERVER=" & txtServer.Text & ";APPTOKEN=" & txtAppToken.Text
         If usefids Then
             getConnectionString &= ";USEFIDS=1"
         End If
@@ -176,7 +177,7 @@ Public Class frmCopy
         End If
         If cmbPassword.SelectedIndex = 0 Then
             cmbPassword.Focus()
-            Throw New System.Exception("Please indicate whether you are using a password or a user token.")
+            Throw New System.Exception("Please indicate whether you are Using a password Or a user token.")
             Return ""
         ElseIf cmbPassword.SelectedIndex = 1 Then
             getConnectionString &= ";PWDISPASSWORD=1"
@@ -190,7 +191,7 @@ Public Class frmCopy
             Try
                 dr = command.ExecuteReader()
             Catch excpt As Exception
-                Throw New System.Exception("Could not count records " & excpt.Message)
+                Throw New System.Exception("Could Not count records " & excpt.Message)
             End Try
             If Not dr.HasRows Then
                 Throw New System.Exception("Counting records failed. " & sql)
@@ -216,7 +217,7 @@ Public Class frmCopy
             sourceFields.Add(fieldNode.fid)
             fieldNode = destinationFieldNodes(destinationLabelsToFids(destComboBoxCell.Value))
             If keyfid = "3" And fieldNode.fid = "3" Then
-                Dim copyAnyway As MsgBoxResult = MsgBox("Copying into the key field " & fieldNode.label & " will update existing records without creating new records. Do you want to continue?", MsgBoxStyle.YesNo)
+                Dim copyAnyway As MsgBoxResult = MsgBox("Copying into the key field " & fieldNode.label & " will update existing records without creating New records. Do you want To Continue?", MsgBoxStyle.YesNo)
                 If copyAnyway = MsgBoxResult.No Then
                     VolatileWrite(copyFinished, True)
                     Return False
@@ -284,7 +285,7 @@ Public Class frmCopy
         End Try
 
         Dim ver As String = quNectConn.ServerVersion
-        Me.Text = Title & " with QuNect ODBC for QuickBase " & ver
+        Me.Text = AppName & " " & appVersion & " with QuNect ODBC for QuickBase " & ver
         Dim m As Match = Regex.Match(ver, "\d+\.(\d+)\.(\d+)\.(\d+)")
         qdbVer.year = CInt(m.Groups(1).Value)
         qdbVer.major = CInt(m.Groups(2).Value)
@@ -336,7 +337,7 @@ Public Class frmCopy
                 frmTableChooser.tvAppsTables.Nodes.Clear()
                 While (dr.Read())
                     Dim applicationName As String = dr.GetString(0)
-                    Dim appDBID As String = dr.GetString(4)
+                    Dim appDBID As String = dr.GetString(2)
                     Dim appNode As TreeNode = frmTableChooser.tvAppsTables.Nodes.Add(applicationName)
                     appNode.Tag = appDBID
                 End While
