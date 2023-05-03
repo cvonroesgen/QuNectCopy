@@ -1,6 +1,7 @@
 ﻿Imports System.ComponentModel
 Imports System.Data.Odbc
 Imports System.Text.RegularExpressions
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 
 
 Public Class frmCopy
@@ -167,19 +168,48 @@ Public Class frmCopy
     End Sub
 
     Private Function getConnectionString(usefids As Boolean, useAppDBID As Boolean) As String
-
-        getConnectionString = "Driver={QuNect ODBC For QuickBase};FIELDNAMECHARACTERS=all;ALLREVISIONS=ALL;uid=" & txtUsername.Text & ";pwd=" & txtPassword.Text & ";QUICKBASESERVER=" & txtServer.Text & ";APPTOKEN=" & txtAppToken.Text
+        Dim userName As String = ""
+        Dim password As String = ""
+        Dim server As String = ""
+        Dim apptoken As String = ""
+        If txtUsername.InvokeRequired Then
+            txtUsername.Invoke(Sub() userName = txtUsername.Text)
+        Else
+            userName = txtUsername.Text
+        End If
+        If txtPassword.InvokeRequired Then
+            txtPassword.Invoke(Sub() password = txtPassword.Text)
+        Else
+            password = txtPassword.Text
+        End If
+        If txtServer.InvokeRequired Then
+            txtServer.Invoke(Sub() server = txtServer.Text)
+        Else
+            server = txtServer.Text
+        End If
+        If txtAppToken.InvokeRequired Then
+            txtAppToken.Invoke(Sub() apptoken = txtAppToken.Text)
+        Else
+            apptoken = txtAppToken.Text
+        End If
+        getConnectionString = "Driver={QuNect ODBC For QuickBase};FIELDNAMECHARACTERS=all;ALLREVISIONS=ALL;uid=" & userName & ";pwd=" & password & ";QUICKBASESERVER=" & server & ";APPTOKEN=" & apptoken
         If usefids Then
             getConnectionString &= ";USEFIDS=1"
         End If
         If useAppDBID Then
             getConnectionString &= ";APPID=" & lblCatalog.Tag
         End If
-        If cmbPassword.SelectedIndex = 0 Then
+        Dim selectedIndex As Integer = 0
+        If cmbPassword.InvokeRequired Then
+            cmbPassword.Invoke(Sub() selectedIndex = cmbPassword.SelectedIndex)
+        Else
+            selectedIndex = cmbPassword.SelectedIndex
+        End If
+        If selectedIndex = 0 Then
             cmbPassword.Focus()
             Throw New System.Exception("Please indicate whether you are Using a password Or a user token.")
             Return ""
-        ElseIf cmbPassword.SelectedIndex = 1 Then
+        ElseIf selectedIndex = 1 Then
             getConnectionString &= ";PWDISPASSWORD=1"
         Else
             getConnectionString &= ";PWDISPASSWORD=0"
