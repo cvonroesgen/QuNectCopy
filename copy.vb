@@ -620,9 +620,8 @@ Public Class frmCopy
         ' InvokeRequired required compares the thread ID of the  
         ' calling thread to the thread ID of the creating thread.  
         ' If these threads are different, it returns true.  
-        If Me.lblProgress.InvokeRequired Or Me.pb.InvokeRequired Then
-            Dim d As New LabelDelegate(AddressOf SetLabelProgress)
-            Me.Invoke(d, New Object() {progressMessage})
+        If Me.lblProgress.InvokeRequired Then
+            Me.Invoke(Sub() Me.lblProgress.Text = progressMessage)
         Else
             Me.lblProgress.Text = progressMessage
         End If
@@ -634,8 +633,11 @@ Public Class frmCopy
         ' calling thread to the thread ID of the creating thread.  
         ' If these threads are different, it returns true.  
         If Me.pb.InvokeRequired Then
-            Dim d As New PBDelegate(AddressOf SetPBProgress)
-            Me.Invoke(d, New Object() {numRecords})
+            Me.Invoke(Sub()
+                          Me.pb.Maximum = existingCount + copyCount
+                          Me.pb.Minimum = existingCount
+                          Me.pb.Value = numRecords
+                      End Sub)
         Else
             Me.pb.Maximum = existingCount + copyCount
             Me.pb.Minimum = existingCount
